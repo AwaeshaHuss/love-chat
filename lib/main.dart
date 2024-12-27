@@ -13,20 +13,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Ensure Firebase is initialized in background handler
-  await Firebase.initializeApp();
-  log('A background message just showed up: ${message.messageId}');
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnon,
   );
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const InitializationSettings initializationSettings = InitializationSettings(
@@ -35,6 +30,13 @@ void main() async {
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   runApp(const MyApp());
+}
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Ensure Firebase is initialized in background handler
+  await Firebase.initializeApp();
+  log('A background message just showed up: ${message.messageId}');
 }
 
 class MyApp extends StatelessWidget {

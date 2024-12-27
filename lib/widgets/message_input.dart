@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FAuth;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,7 +23,7 @@ class _MessageInputState extends State<MessageInput> {
     final pickedFile = await (isVideo 
         ? picker.pickVideo(source: source)
         : picker.pickImage(source: source));
-        
+
     if (pickedFile == null) return;
 
     final file = File(pickedFile.path);
@@ -64,13 +65,15 @@ class _MessageInputState extends State<MessageInput> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        controller: _controller,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          prefixIcon: IconButton(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        border: Border(top: BorderSide(color: Colors.grey[700]!)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
             onPressed: () {
               showModalBottomSheet(
@@ -80,12 +83,18 @@ class _MessageInputState extends State<MessageInput> {
                   children: [
                     ListTile(
                       leading: const Icon(Icons.camera),
-                      title: const Text('Capture Image'),
+                      title: Text(
+                        'Capture Image',
+                        style: GoogleFonts.aBeeZee(),
+                      ),
                       onTap: () => _pickAndUploadMedia(ImageSource.camera),
                     ),
                     ListTile(
                       leading: const Icon(Icons.image),
-                      title: const Text('Select Image'),
+                      title: Text(
+                        'Select Image',
+                        style: GoogleFonts.aBeeZee(),
+                      ),
                       onTap: () => _pickAndUploadMedia(ImageSource.gallery),
                     ),
                   ],
@@ -93,13 +102,34 @@ class _MessageInputState extends State<MessageInput> {
               );
             },
           ),
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.send, color: Colors.white),
-            onPressed: () => _sendMessage(),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              decoration: BoxDecoration(
+                color: Colors.grey[700],
+                borderRadius: BorderRadius.circular(20.0),
+              ),
+              child: TextField(
+                controller: _controller,
+                style: GoogleFonts.aBeeZee(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Type a message',
+                  hintStyle: GoogleFonts.roboto(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
           ),
-          labelText: 'Send a message...',
-          labelStyle: const TextStyle(color: Colors.white),
-        ),
+          const SizedBox(width: 8.0),
+          CircleAvatar(
+            radius: 24.0,
+            backgroundColor: Colors.green,
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              onPressed: () => _sendMessage(),
+            ),
+          ),
+        ],
       ),
     );
   }

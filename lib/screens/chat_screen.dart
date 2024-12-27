@@ -5,8 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart' as FAuth;
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:love_chat/screens/auth_screen.dart';
-// import 'package:love_chat/screens/video_call_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:love_chat/widgets/message_input.dart';
 
@@ -97,26 +97,33 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: Colors.grey[850],
       appBar: AppBar(
         elevation: 0.0,
-        backgroundColor: Colors.grey[850],
-        title: const Text(
-          'Love Chat',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontStyle: FontStyle.italic,
-            decoration: TextDecoration.underline,
-            decorationColor: Colors.white,
-          ),
+        backgroundColor: Colors.green,
+        title: Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.lightGreenAccent,
+                  width: 2.5,
+                )
+              ),
+              child: CircleAvatar(
+                child: ClipOval(child: Image.asset('assets/images/love.jpeg')),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Love Chat',
+              style: GoogleFonts.aBeeZee(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ],
         ),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.video_camera_back_outlined, color: Colors.white),
-          //   onPressed: () {
-          //     Navigator.of(context).pushReplacement(
-          //       MaterialPageRoute(builder: (context) => const VideoCallScreen()),
-          //     );
-          //   },
-          // ),
           IconButton(
             icon: const Icon(Icons.exit_to_app, color: Colors.white),
             onPressed: () {
@@ -135,6 +142,7 @@ class _ChatScreenState extends State<ChatScreen> {
               stream: FirebaseFirestore.instance
                   .collection('chat')
                   .orderBy('createdAt', descending: true)
+                  .limit(10)
                   .snapshots(),
               builder: (ctx, AsyncSnapshot<QuerySnapshot> chatSnapshot) {
                 if (chatSnapshot.connectionState == ConnectionState.waiting) {
@@ -165,7 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           maxWidth: MediaQuery.sizeOf(context).width * .7,
                         ),
                         decoration: BoxDecoration(
-                          color: isMe ? Colors.green : Colors.grey[300],
+                          color: isMe ? Colors.green[300] : Colors.white,
                           borderRadius: BorderRadius.only(
                             topRight: const Radius.circular(12.0),
                             topLeft: const Radius.circular(12.0),
@@ -176,22 +184,30 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ? Radius.zero
                                 : const Radius.circular(18.0),
                           ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 3,
+                              offset: Offset(2, 2),
+                            ),
+                          ],
                         ),
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: FadeInImage(
                                   image: NetworkImage(imageUrl),
-                                  placeholder: const AssetImage('assets/images/logo.png'), 
-                                  fit: BoxFit.cover, 
+                                  placeholder: const AssetImage('assets/images/logo.png'),
+                                  fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: 250,
                                 ),
                               )
                             : Text(
                                 message ?? '',
-                                style: TextStyle(
-                                  color: isMe ? Colors.white : Colors.black,
+                                style: GoogleFonts.aBeeZee(
+                                  color: isMe ? Colors.black : Colors.black87,
+                                  fontSize: 16,
                                 ),
                               ),
                       ),
@@ -201,7 +217,7 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          const Divider(thickness: 2),
+          const Divider(height: 1, color: Colors.grey),
           const MessageInput(),
         ],
       ),
