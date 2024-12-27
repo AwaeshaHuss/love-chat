@@ -114,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 10),
             Text(
-              'Love Chat',
+              'Love',
               style: GoogleFonts.aBeeZee(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
