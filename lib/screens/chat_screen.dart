@@ -2,16 +2,25 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FAuth;
-import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:love_chat/screens/auth_screen.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:love_chat/widgets/message_input.dart';
+import '../widgets/message_input.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({Key? key}) : super(key: key);
+  final String userId;
+  final String userName;
+  final String userImage;
+
+  const ChatScreen({
+    Key? key,
+    required this.userId,
+    required this.userName,
+    required this.userImage,
+  }) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -21,6 +30,12 @@ class _ChatScreenState extends State<ChatScreen> {
   String? lastSeenMessageId;
   final FAuth.User? user = FAuth.FirebaseAuth.instance.currentUser;
 
+  String _getChatId() {
+    final users = [user!.uid, widget.userId];
+    users.sort();
+    return users.join('_');
+  }
+
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -29,18 +44,6 @@ class _ChatScreenState extends State<ChatScreen> {
     if (status.isDenied) {
       await Permission.notification.request();
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeNotifications();
-    _checkAndRequestPermissions();
-    FirebaseMessaging.instance.subscribeToTopic('chat');
-    FirebaseMessaging.instance.getToken().then((token) {
-      log('FCM Token: $token');
-    });
-    setupNotificationListener();
   }
 
   Future<void> _initializeNotifications() async {
@@ -92,124 +95,143 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+    _checkAndRequestPermissions();
+    FirebaseMessaging.instance.subscribeToTopic('chat');
+    FirebaseMessaging.instance.getToken().then((token) {
+      log('FCM Token: $token');
+    });
+    setupNotificationListener();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final maxBubbleWidth = MediaQuery.of(context).size.width * .7125;
+
     return Scaffold(
       backgroundColor: Colors.grey[850],
       appBar: AppBar(
-        elevation: 0.0,
         backgroundColor: Colors.green,
+        leadingWidth: maxBubbleWidth * .085,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.lightGreenAccent,
-                  width: 2.5,
-                )
-              ),
-              child: CircleAvatar(
-                child: ClipOval(child: Image.asset('assets/images/love.jpeg')),
-              ),
+            CircleAvatar(
+              backgroundColor: Colors.grey[300],
+              backgroundImage: widget.userImage.isNotEmpty
+                  ? NetworkImage(widget.userImage)
+                  : const AssetImage('assets/images/logo.png')
+                      as ImageProvider,
             ),
             const SizedBox(width: 10),
             Text(
-              'Love',
-              style: GoogleFonts.aBeeZee(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 18,
-              ),
+              widget.userName,
+              style: GoogleFonts.aBeeZee(color: Colors.white, fontWeight: FontWeight.w700),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app, color: Colors.white),
-            onPressed: () {
-              FAuth.FirebaseAuth.instance.signOut();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const AuthScreen()),
-              );
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder(
+            child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('chat')
+                  .collection('chats')
+                  .doc(_getChatId())
+                  .collection('messages')
                   .orderBy('createdAt', descending: true)
-                  .limit(10)
                   .snapshots(),
-              builder: (ctx, AsyncSnapshot<QuerySnapshot> chatSnapshot) {
+              builder: (ctx, chatSnapshot) {
                 if (chatSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
+                if (!chatSnapshot.hasData || chatSnapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No messages yet',
+                      style: GoogleFonts.aBeeZee(color: Colors.white70),
+                    ),
+                  );
+                }
+
                 final chatDocs = chatSnapshot.data!.docs;
+
                 return ListView.builder(
                   reverse: true,
                   itemCount: chatDocs.length,
                   itemBuilder: (ctx, index) {
-                    final data = chatDocs[index].data() as Map<String, dynamic>;
-                    final isMe = data['userId'] == user?.uid;
-                    final message = data['text'] as String?;
-                    final imageUrl = data['imageUrl'] as String?;
+                    final message = chatDocs[index].data() as Map<String, dynamic>;
+                    final isSender = message['senderId'] == user!.uid;
+                    final timestamp = (message['createdAt'] as Timestamp).toDate();
+                    final formattedDateTime = DateFormat('yyyy-MM-dd hh:mm').format(timestamp);
+
 
                     return Align(
                       alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 12,
-                        ),
-                        padding: imageUrl != null && imageUrl.isNotEmpty
-                            ? const EdgeInsets.all(4)
-                            : const EdgeInsets.all(12),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.sizeOf(context).width * .7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.green[300] : Colors.white,
-                          borderRadius: BorderRadius.only(
-                            topRight: const Radius.circular(12.0),
-                            topLeft: const Radius.circular(12.0),
-                            bottomLeft: isMe
-                                ? const Radius.circular(18.0)
-                                : Radius.zero,
-                            bottomRight: isMe
-                                ? Radius.zero
-                                : const Radius.circular(18.0),
+                          isSender ? Alignment.centerRight : Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+                        child: Container(
+                          padding: (message['imageUrl'] != null &&
+                                  message['imageUrl'].isNotEmpty) ? const EdgeInsets.all(4.0):const EdgeInsets.all(10.0),
+                          margin: const EdgeInsets.symmetric(
+                            vertical: 5,
+                            horizontal: 8,
                           ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 3,
-                              offset: Offset(2, 2),
+                          decoration: BoxDecoration(
+                            color: isSender
+                                ? Colors.green[300]
+                                : Colors.grey[700],
+                            borderRadius: BorderRadius.only(
+                              topRight: const Radius.circular(20.0),
+                              topLeft: const Radius.circular(20.0),
+                              bottomRight: isSender ? const Radius.circular(0):const Radius.circular(20.0),
+                              bottomLeft: isSender ? const Radius.circular(20.0):const Radius.circular(0),
                             ),
-                          ],
-                        ),
-                        child: imageUrl != null && imageUrl.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: FadeInImage(
-                                  image: NetworkImage(imageUrl),
-                                  placeholder: const AssetImage('assets/images/logo.png'),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: 250,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: isSender
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              if (message['imageUrl'] != null &&
+                                  message['imageUrl'].isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  child: FadeInImage.assetNetwork(
+                                    image: message['imageUrl'],
+                                    placeholder: 'assets/images/logo.png',
+                                    width: maxBubbleWidth,
+                                    height: 250,
+                                    fit: BoxFit.fill,
+                                  ),
                                 ),
-                              )
-                            : Text(
-                                message ?? '',
+                              if (message['text'] != null &&
+                                  message['text'].isNotEmpty)
+                                Text(
+                                  message['text'],
+                                  style: GoogleFonts.aBeeZee(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              const SizedBox(height: 5),
+                              Text(
+                                formattedDateTime,
                                 style: GoogleFonts.aBeeZee(
-                                  color: isMe ? Colors.black : Colors.black87,
-                                  fontSize: 16,
+                                  color: Colors.white70,
+                                  fontSize: 12,
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -217,8 +239,10 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          const Divider(height: 1, color: Colors.grey),
-          const MessageInput(),
+          MessageInput(
+            currentUserId: user!.uid,
+            recipientUserId: widget.userId,
+          ),
         ],
       ),
     );

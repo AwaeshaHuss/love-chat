@@ -5,9 +5,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FAuth;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:love_chat/const.dart';
+import 'package:love_chat/helpers/const.dart';
+import 'package:love_chat/helpers/shared_prefs.dart';
 import 'package:love_chat/screens/auth_screen.dart';
 import 'package:love_chat/screens/chat_screen.dart';
+import 'package:love_chat/screens/contacts_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -28,6 +30,8 @@ void main() async {
     android: initializationSettingsAndroid,
   );
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  await SharedPreferencesHelper.init();
+
 
   runApp(const MyApp());
 }
@@ -44,8 +48,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  final FAuth.FirebaseAuth _auth = FAuth.FirebaseAuth.instance;
-  final uid = _auth.currentUser?.uid;
+  final FAuth.FirebaseAuth auth = FAuth.FirebaseAuth.instance;
+  final uid = auth.currentUser?.uid;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Love Chat App',
@@ -53,7 +57,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         primarySwatch: Colors.blue,
       ),
-      home: uid == null ? const AuthScreen() : const ChatScreen(),
+      home: uid == null ? const AuthScreen() : const ContactsScreen(),
     );
   }
 }
